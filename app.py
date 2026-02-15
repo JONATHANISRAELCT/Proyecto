@@ -19,3 +19,4 @@ def denuncia(codigo):
 
 if __name__ == "__main__":
     app.run(debug=True)
+    
