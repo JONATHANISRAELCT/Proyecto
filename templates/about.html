@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Acerca del Sistema</h2>
+
+<p>Este sistema web fue desarrollado para la gestión básica de información policial.</p>
+
+{% if edad >= 18 %}
+<p>El usuario es mayor de edad.</p>
+{% else %}
+<p>El usuario es menor de edad.</p>
+{% endif %}
+
+{% endblock %}

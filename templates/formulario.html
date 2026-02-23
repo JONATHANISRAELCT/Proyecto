@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Registro de Ciudadano</h2>
+
+<form action="/procesar" method="POST">
+    <label>Nombre:</label>
+    <input type="text" name="nombre" required>
+    <button type="submit">Enviar</button>
+</form>
+
+{% endblock %}

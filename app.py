@@ -1,21 +1,28 @@
-from flask import Flask
+from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-# Ruta principal
 @app.route("/")
 def home():
-    return "Sistema de Consultas - Policía Nacional del Ecuador"
+    return render_template("index.html", titulo="Sistema Policial")
 
-# Ruta dinámica para consultar ciudadano
-@app.route("/ciudadano/<nombre>")
-def ciudadano(nombre):
-    return f"Ciudadano: {nombre} - Registro verificado correctamente."
+@app.route("/about")
+def about():
+    return render_template("about.html", edad=25)
 
-# Ruta dinámica para consultar denuncia
-@app.route("/denuncia/<codigo>")
-def denuncia(codigo):
-    return f"Denuncia N° {codigo} - En proceso de investigación."
+@app.route("/productos")
+def productos():
+    lista = ["Uniforme", "Gorra", "Chaleco", "Linterna"]
+    return render_template("productos.html", productos=lista)
+
+@app.route("/formulario")
+def formulario():
+    return render_template("formulario.html")
+
+@app.route("/procesar", methods=["POST"])
+def procesar():
+    nombre = request.form["nombre"]
+    return render_template("respuesta.html", nombre=nombre)
 
 if __name__ == "__main__":
     app.run(debug=True)
