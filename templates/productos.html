@@ -1,11 +1,40 @@
-{% extends "base.html" %}
+<h2>Inventario de Productos</h2>
 
-{% block content %}
-<h2>Productos Institucionales</h2>
+<form action="/agregar" method="POST">
+    <input type="text" name="nombre" placeholder="Nombre" required>
+    <input type="number" name="cantidad" placeholder="Cantidad" required>
+    <input type="number" step="0.01" name="precio" placeholder="Precio" required>
+    <button type="submit">Agregar</button>
+</form>
 
-<ul>
-    <li>Chalecos de seguridad</li>
-    <li>Uniformes tácticos</li>
-    <li>Equipos de comunicación</li>
-</ul>
-{% endblock %}
+<hr>
+
+<form action="/buscar" method="POST">
+    <input type="text" name="nombre" placeholder="Buscar por nombre" required>
+    <button type="submit">Buscar</button>
+</form>
+
+<hr>
+
+<table border="1">
+    <tr>
+        <th>ID</th>
+        <th>Nombre</th>
+        <th>Cantidad</th>
+        <th>Precio</th>
+        <th>Acción</th>
+    </tr>
+
+    {% for producto in productos %}
+    <tr>
+        <td>{{ producto.get_id() }}</td>
+        <td>{{ producto.get_nombre() }}</td>
+        <td>{{ producto.get_cantidad() }}</td>
+        <td>{{ producto.get_precio() }}</td>
+        <td>
+            <a href="/editar/{{ producto.get_id() }}">Editar</a> |
+            <a href="/eliminar/{{ producto.get_id() }}">Eliminar</a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
