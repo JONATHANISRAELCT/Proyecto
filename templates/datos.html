@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Datos guardados</title>
+</head>
+<body>
+
+<h2>Datos almacenados</h2>
+
+<table border="1">
+
+<tr>
+    <th>Nombre</th>
+    <th>Cantidad</th>
+    <th>Precio</th>
+</tr>
+
+{% for dato in datos %}
+
+<tr>
+
+{% if dato.nombre is defined %}
+
+<td>{{ dato.nombre }}</td>
+<td>{{ dato.cantidad }}</td>
+<td>{{ dato.precio }}</td>
+
+{% else %}
+
+<td>{{ dato[0] }}</td>
+<td>{{ dato[1] }}</td>
+<td>{{ dato[2] }}</td>
+
+{% endif %}
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+</body>
+</html>
