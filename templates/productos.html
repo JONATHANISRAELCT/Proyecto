@@ -1,29 +1,73 @@
-<h2>Inventario de Productos</h2>
+{% extends "base.html" %}
 
-<form action="/agregar" method="POST">
-    <input type="text" name="nombre" placeholder="Nombre" required>
-    <input type="number" name="cantidad" placeholder="Cantidad" required>
-    <input type="number" step="0.01" name="precio" placeholder="Precio" required>
-    <button type="submit">Agregar</button>
+{% block content %}
+
+<h2 class="mb-4">Inventario de Productos</h2>
+
+<!-- FORMULARIO AGREGAR -->
+<div class="card mb-4">
+<div class="card-body">
+
+<h4>Agregar Producto</h4>
+
+<form action="/agregar" method="POST" class="row g-3">
+
+<div class="col-md-4">
+<input type="text" name="nombre" class="form-control" placeholder="Nombre" required>
+</div>
+
+<div class="col-md-3">
+<input type="number" name="cantidad" class="form-control" placeholder="Cantidad" required>
+</div>
+
+<div class="col-md-3">
+<input type="number" step="0.01" name="precio" class="form-control" placeholder="Precio" required>
+</div>
+
+<div class="col-md-2">
+<button type="submit" class="btn btn-success w-100">Agregar</button>
+</div>
+
 </form>
 
-<hr>
+</div>
+</div>
 
-<form action="/buscar" method="POST">
-    <input type="text" name="nombre" placeholder="Buscar por nombre">
-    <button type="submit">Buscar</button>
+<!-- BUSCAR -->
+<div class="card mb-4">
+<div class="card-body">
+
+<h4>Buscar Producto</h4>
+
+<form action="/buscar" method="POST" class="row g-3">
+
+<div class="col-md-10">
+<input type="text" name="nombre" class="form-control" placeholder="Buscar por nombre">
+</div>
+
+<div class="col-md-2">
+<button type="submit" class="btn btn-primary w-100">Buscar</button>
+</div>
+
 </form>
 
-<hr>
+</div>
+</div>
 
-<table border="1" cellpadding="8">
+<!-- TABLA -->
+<table class="table table-striped table-bordered">
+
+<thead class="table-dark">
 <tr>
 <th>ID</th>
 <th>Nombre</th>
 <th>Cantidad</th>
 <th>Precio</th>
-<th>Acción</th>
+<th>Acciones</th>
 </tr>
+</thead>
+
+<tbody>
 
 {% for producto in productos %}
 <tr>
@@ -31,11 +75,24 @@
 <td>{{ producto.get_nombre() }}</td>
 <td>{{ producto.get_cantidad() }}</td>
 <td>{{ producto.get_precio() }}</td>
+
 <td>
-<a href="/editar/{{ producto.get_id() }}">Editar</a> |
-<a href="/eliminar/{{ producto.get_id() }}">Eliminar</a>
+
+<a href="/editar/{{ producto.get_id() }}" class="btn btn-warning btn-sm">
+Editar
+</a>
+
+<a href="/eliminar/{{ producto.get_id() }}" class="btn btn-danger btn-sm">
+Eliminar
+</a>
+
 </td>
+
 </tr>
 {% endfor %}
 
+</tbody>
+
 </table>
+
+{% endblock %}

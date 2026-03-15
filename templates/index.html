@@ -2,10 +2,46 @@
 
 {% block content %}
 
-<h2>Página Principal</h2>
+<div class="text-center mb-4">
+<h2>Sistema de Gestión Institucional</h2>
+<p class="lead">
+Plataforma web para la administración de productos y consultas
+de la Policía Nacional del Ecuador.
+</p>
+</div>
 
-<p>Bienvenido al Sistema Web de la Policía Nacional del Ecuador.</p>
+<div class="row">
 
-<p>Este sistema permite gestionar consultas básicas, productos institucionales y registro de ciudadanos.</p>
+<div class="col-md-4">
+<div class="card">
+<div class="card-body text-center">
+<h4>Inventario</h4>
+<p>Gestión de productos institucionales.</p>
+<a href="/productos" class="btn btn-primary">Ver Productos</a>
+</div>
+</div>
+</div>
+
+<div class="col-md-4">
+<div class="card">
+<div class="card-body text-center">
+<h4>Usuarios</h4>
+<p>Consulta de usuarios registrados en la base de datos.</p>
+<a href="/usuarios" class="btn btn-success">Ver Usuarios</a>
+</div>
+</div>
+</div>
+
+<div class="col-md-4">
+<div class="card">
+<div class="card-body text-center">
+<h4>Formulario</h4>
+<p>Registro de información ciudadana.</p>
+<a href="/formulario" class="btn btn-warning">Abrir Formulario</a>
+</div>
+</div>
+</div>
+
+</div>
 
 {% endblock %}
