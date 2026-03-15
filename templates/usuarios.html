@@ -1,0 +1,20 @@
+<h2>Usuarios del Sistema</h2>
+
+<table border="1">
+<tr>
+<th>ID</th>
+<th>Nombre</th>
+<th>Email</th>
+<th>Password</th>
+</tr>
+
+{% for u in usuarios %}
+<tr>
+<td>{{ u[0] }}</td>
+<td>{{ u[1] }}</td>
+<td>{{ u[2] }}</td>
+<td>{{ u[3] }}</td>
+</tr>
+{% endfor %}
+
+</table>

@@ -1,3 +1,4 @@
+from Conexion.conexion import obtener_conexion
 from flask import Flask, render_template, request, redirect
 import json
 import csv
@@ -34,6 +35,18 @@ def productos():
 
     return render_template("productos.html", productos=inventario.mostrar_todos())
 
+
+@app.route("/usuarios")
+def usuarios():
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
+
+    cursor.execute("SELECT * FROM usuarios")
+    usuarios = cursor.fetchall()
+
+    conexion.close()
+
+    return render_template("usuarios.html", usuarios=usuarios)
 
 @app.route("/buscar", methods=["POST"])
 def buscar():
