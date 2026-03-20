@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - Sistema Policial</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin:0;
+            padding:0;
+            background-color:#f4f4f4;
+        }
+        header {
+            background-color:#2f2f2f;
+            color:white;
+            padding:25px;
+            text-align:center;
+        }
+        nav {
+            background-color:#444;
+            padding:12px;
+        }
+        nav a {
+            color:white;
+            margin:0 12px;
+            text-decoration:none;
+            font-weight:bold;
+        }
+        nav a:hover {
+            text-decoration:underline;
+        }
+        main {
+            padding:30px;
+        }
+        h2 {
+            margin-top:0;
+        }
+        .acciones {
+            margin-top: 25px;
+        }
+        .boton {
+            display:inline-block;
+            margin:10px;
+            padding:12px 24px;
+            background-color:#4CAF50;
+            color:white;
+            text-decoration:none;
+            border-radius:6px;
+        }
+        .boton:hover {
+            background-color:#45a049;
+        }
+        footer {
+            background-color:#2f2f2f;
+            color:white;
+            text-align:center;
+            padding:12px;
+            position:fixed;
+            bottom:0;
+            width:100%;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Sistema Policial</h1>
+        <p>Bienvenido, {{ usuario }}</p>
+    </header>
+
+    <nav>
+        <a href="/">Inicio</a>
+        <a href="/productos">Productos</a>
+        <a href="/usuarios">Usuarios</a>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/logout">Cerrar Sesión</a>
+    </nav>
+
+    <main>
+        <h2>Panel de Control</h2>
+        <p>Gestiona el sistema institucional desde aquí:</p>
+
+        <div class="acciones">
+            <a class="boton" href="/productos">Ver Productos</a>
+            <a class="boton" href="/usuarios">Ver Usuarios</a>
+            <a class="boton" href="/logout">Cerrar Sesión</a>
+        </div>
+    </main>
+
+    <footer>
+        © 2026 Policía Nacional del Ecuador - UNIDAD DE MANTENIMIENTO DEL ORDEN
+    </footer>
+</body>
+</html>

@@ -1,24 +1,54 @@
 body {
+    background-color: #f4f4f4;
     font-family: Arial, sans-serif;
-    margin: 20px;
 }
 
-h1 {
-    color: #003366;
+header {
+    background-color: #1f2730;
+    color: white;
 }
 
 nav a {
-    text-decoration: none;
-    margin-right: 10px;
-    color: #0066cc;
+    font-size: 16px;
+    font-weight: 500;
 }
 
 nav a:hover {
     text-decoration: underline;
 }
 
+h1, h2, h4 {
+    font-weight: bold;
+}
+
+.lead {
+    font-size: 1.4rem;
+    color: #333;
+}
+
+.card {
+    border-radius: 12px;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    margin-bottom: 20px;
+    transition: transform 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+}
+
+.card-body {
+    padding: 30px 20px;
+}
+
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    padding: 10px 20px;
+}
+
 footer {
-    margin-top: 20px;
-    font-size: 14px;
-    color: gray;
+    font-size: 16px;
+    color: #666;
 }
