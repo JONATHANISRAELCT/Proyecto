@@ -1,7 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import Usuario
+from model.usuario import Usuario
 from Conexion.conexion import obtener_conexion
 from database import crear_tabla, conectar
 from model.producto import Producto
@@ -32,11 +32,20 @@ crear_tabla()
 inventario = Inventario()
 
 # =======================
-# Rutas públicas
+# Rutas principales
 # =======================
 @app.route("/")
 def inicio():
     return render_template("index.html")
+
+@app.route("/about")
+def about():
+    return render_template("about.html")
+
+@app.route("/formulario")
+@login_required
+def formulario():
+    return render_template("formulario.html")
 
 # =======================
 # Registro
@@ -118,7 +127,7 @@ def logout():
     return redirect(url_for("login"))
 
 # =======================
-# Dashboard protegido
+# Dashboard
 # =======================
 @app.route("/dashboard")
 @login_required
@@ -126,7 +135,7 @@ def dashboard():
     return render_template("dashboard.html", usuario=current_user.nombre)
 
 # =======================
-# Productos
+# Productos SQLite (sistema viejo)
 # =======================
 @app.route("/productos")
 @login_required
@@ -172,7 +181,6 @@ def agregar():
     cantidad = int(request.form["cantidad"])
     precio = float(request.form["precio"])
 
-    # Guardar en SQLite
     conn = conectar()
     cursor = conn.cursor()
     cursor.execute(
@@ -182,16 +190,13 @@ def agregar():
     conn.commit()
     conn.close()
 
-    # Guardar en TXT
     with open("data/datos.txt", "a", encoding="utf-8") as archivo:
         archivo.write(f"{nombre},{cantidad},{precio}\n")
 
-    # Guardar en CSV
     with open("data/datos.csv", "a", newline="", encoding="utf-8") as archivo:
         writer = csv.writer(archivo)
         writer.writerow([nombre, cantidad, precio])
 
-    # Guardar en JSON
     nuevo = {"nombre": nombre, "cantidad": cantidad, "precio": precio}
     try:
         with open("data/datos.json", "r", encoding="utf-8") as archivo:
@@ -245,6 +250,195 @@ def editar(id):
     return render_template("editar.html", producto=producto)
 
 # =======================
+# Productos MySQL (sistema nuevo)
+# =======================
+@app.route("/productos_mysql")
+@login_required
+def productos_mysql():
+    conexion = obtener_conexion()
+    cursor = conexion.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT p.id_producto, p.nombre, p.precio, p.stock,
+               c.nombre_categoria,
+               pr.nombre AS proveedor
+        FROM productos_mysql p
+        LEFT JOIN categorias c ON p.id_categoria = c.id_categoria
+        LEFT JOIN proveedores pr ON p.id_proveedor = pr.id_proveedor
+        ORDER BY p.id_producto ASC
+    """)
+    productos = cursor.fetchall()
+
+    cursor.close()
+    conexion.close()
+
+    return render_template("productos_mysql.html", productos=productos)
+
+@app.route("/productos_mysql/agregar", methods=["GET", "POST"])
+@login_required
+def agregar_producto_mysql():
+    conexion = obtener_conexion()
+    cursor = conexion.cursor(dictionary=True)
+
+    cursor.execute("SELECT * FROM categorias")
+    categorias = cursor.fetchall()
+
+    cursor.execute("SELECT * FROM proveedores")
+    proveedores = cursor.fetchall()
+
+    if request.method == "POST":
+        nombre = request.form["nombre"]
+        precio = request.form["precio"]
+        stock = request.form["stock"]
+        id_categoria = request.form["id_categoria"]
+        id_proveedor = request.form["id_proveedor"]
+
+        cursor2 = conexion.cursor()
+        cursor2.execute("""
+            INSERT INTO productos_mysql (nombre, precio, stock, id_categoria, id_proveedor)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (nombre, precio, stock, id_categoria, id_proveedor))
+        conexion.commit()
+        cursor2.close()
+
+        cursor.close()
+        conexion.close()
+
+        flash("Producto MySQL agregado correctamente.", "success")
+        return redirect(url_for("productos_mysql"))
+
+    cursor.close()
+    conexion.close()
+    return render_template(
+        "agregar_producto_mysql.html",
+        categorias=categorias,
+        proveedores=proveedores
+    )
+
+@app.route("/productos_mysql/editar/<int:id_producto>", methods=["GET", "POST"])
+@login_required
+def editar_producto_mysql(id_producto):
+    conexion = obtener_conexion()
+    cursor = conexion.cursor(dictionary=True)
+
+    cursor.execute("SELECT * FROM categorias")
+    categorias = cursor.fetchall()
+
+    cursor.execute("SELECT * FROM proveedores")
+    proveedores = cursor.fetchall()
+
+    cursor.execute("SELECT * FROM productos_mysql WHERE id_producto = %s", (id_producto,))
+    producto = cursor.fetchone()
+
+    if request.method == "POST":
+        nombre = request.form["nombre"]
+        precio = request.form["precio"]
+        stock = request.form["stock"]
+        id_categoria = request.form["id_categoria"]
+        id_proveedor = request.form["id_proveedor"]
+
+        cursor2 = conexion.cursor()
+        cursor2.execute("""
+            UPDATE productos_mysql
+            SET nombre = %s, precio = %s, stock = %s, id_categoria = %s, id_proveedor = %s
+            WHERE id_producto = %s
+        """, (nombre, precio, stock, id_categoria, id_proveedor, id_producto))
+        conexion.commit()
+        cursor2.close()
+
+        cursor.close()
+        conexion.close()
+
+        flash("Producto MySQL actualizado correctamente.", "success")
+        return redirect(url_for("productos_mysql"))
+
+    cursor.close()
+    conexion.close()
+    return render_template(
+        "editar_producto_mysql.html",
+        producto=producto,
+        categorias=categorias,
+        proveedores=proveedores
+    )
+
+@app.route("/productos_mysql/eliminar/<int:id_producto>", methods=["GET", "POST"])
+@login_required
+def eliminar_producto_mysql(id_producto):
+    conexion = obtener_conexion()
+    cursor = conexion.cursor(dictionary=True)
+
+    cursor.execute("SELECT * FROM productos_mysql WHERE id_producto = %s", (id_producto,))
+    producto = cursor.fetchone()
+
+    if request.method == "POST":
+        cursor2 = conexion.cursor()
+        cursor2.execute("DELETE FROM productos_mysql WHERE id_producto = %s", (id_producto,))
+        conexion.commit()
+        cursor2.close()
+
+        cursor.close()
+        conexion.close()
+
+        flash("Producto MySQL eliminado correctamente.", "info")
+        return redirect(url_for("productos_mysql"))
+
+    cursor.close()
+    conexion.close()
+    return render_template("eliminar_producto_mysql.html", producto=producto)
+
+@app.route("/productos_mysql/pdf")
+@login_required
+def pdf_productos_mysql():
+    from fpdf import FPDF
+    import os
+
+    conexion = obtener_conexion()
+    cursor = conexion.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT p.id_producto, p.nombre, p.precio, p.stock,
+               c.nombre_categoria,
+               pr.nombre AS proveedor
+        FROM productos_mysql p
+        LEFT JOIN categorias c ON p.id_categoria = c.id_categoria
+        LEFT JOIN proveedores pr ON p.id_proveedor = pr.id_proveedor
+        ORDER BY p.id_producto ASC
+    """)
+    productos = cursor.fetchall()
+    cursor.close()
+    conexion.close()
+
+    ruta_pdf = os.path.join("static", "reporte_productos_mysql.pdf")
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(190, 10, "Reporte de Productos MySQL", ln=True, align="C")
+    pdf.ln(5)
+
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(15, 10, "ID", 1)
+    pdf.cell(45, 10, "Nombre", 1)
+    pdf.cell(25, 10, "Precio", 1)
+    pdf.cell(20, 10, "Stock", 1)
+    pdf.cell(40, 10, "Categoria", 1)
+    pdf.cell(45, 10, "Proveedor", 1)
+    pdf.ln()
+
+    pdf.set_font("Arial", "", 9)
+    for p in productos:
+        pdf.cell(15, 10, str(p["id_producto"]), 1)
+        pdf.cell(45, 10, str(p["nombre"])[:20], 1)
+        pdf.cell(25, 10, str(p["precio"]), 1)
+        pdf.cell(20, 10, str(p["stock"]), 1)
+        pdf.cell(40, 10, str(p["nombre_categoria"] or "")[:18], 1)
+        pdf.cell(45, 10, str(p["proveedor"] or "")[:20], 1)
+        pdf.ln()
+
+    pdf.output(ruta_pdf)
+
+    return send_file(ruta_pdf, as_attachment=True)
+
+# =======================
 # Usuarios
 # =======================
 @app.route("/usuarios")
@@ -259,7 +453,7 @@ def usuarios():
     return render_template("usuarios.html", usuarios=usuarios)
 
 # =======================
-# Guardar y ver TXT, CSV, JSON
+# Archivos TXT, CSV, JSON
 # =======================
 @app.route("/guardar_txt", methods=["POST"])
 @login_required
