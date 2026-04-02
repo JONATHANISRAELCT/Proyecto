@@ -1,20 +1,4 @@
-# Archivos compilados de Python
-*.pyc
-__pycache__/
-
-# Entornos virtuales
 venv/
-env/
-
-# Archivos de configuración locales o secretos
-*.env
-
-# Bases de datos locales
-*.sqlite3
-
-# Archivos de sistema
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
+__pycache__/
+*.pyc
+.env
