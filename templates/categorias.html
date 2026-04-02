@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <h2>Listado de Categorías</h2>
+
+    <!-- MENSAJES -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-info">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- FORMULARIO -->
+    <form method="POST" action="{{ url_for('categorias') }}" class="row g-2 mb-3">
+        <div class="col-md-6">
+            <input type="text" name="nombre_categoria" class="form-control" placeholder="Nueva categoría" required>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-success">Agregar</button>
+        </div>
+    </form>
+
+    <!-- TABLA -->
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>ID</th>
+                <th>Nombre categoría</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in categorias %}
+            <tr>
+                <td>{{ c[0] }}</td>
+                <td>{{ c[1] }}</td>
+                <td>
+                    <span class="text-muted">Sin acciones</span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+{% endblock %}

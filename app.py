@@ -1,46 +1,77 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
-from flask_login import LoginManager, login_user, login_required, logout_user, current_user
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file
+from flask_login import LoginManager, login_user, login_required, logout_user, UserMixin, current_user
+import mysql.connector
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import Usuario
-from Conexion.conexion import obtener_conexion
-from database import crear_tabla, conectar
-from model.producto import Producto
-from model.inventario import Inventario
-import json
-import csv
+from fpdf import FPDF
+import os
 
 app = Flask(__name__)
-app.secret_key = "supersecretkey"
+app.secret_key = "clave_secreta"
 
-# =======================
-# Configurar Flask-Login
-# =======================
+# =========================
+# LOGIN CONFIG
+# =========================
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
-login_manager.login_message = None
-login_manager.login_message_category = None
+login_manager.login_message = "Debes iniciar sesión para acceder."
+login_manager.login_message_category = "warning"
+
+
+# =========================
+# CONEXION MYSQL
+# =========================
+def obtener_conexion():
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="123456",
+        database="articulos_policiales",
+        port=3307
+    )
+
+
+# =========================
+# MODELO USUARIO
+# =========================
+class Usuario(UserMixin):
+    def __init__(self, id_usuario, nombre, email, password):
+        self.id = id_usuario
+        self.nombre = nombre
+        self.email = email
+        self.password = password
+
 
 @login_manager.user_loader
 def load_user(user_id):
-    return Usuario.get_by_id(user_id)
+    conexion = obtener_conexion()
+    cursor = conexion.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM usuarios WHERE id_usuario = %s", (user_id,))
+    user = cursor.fetchone()
+    cursor.close()
+    conexion.close()
 
-# =======================
-# Inicializar tabla SQLite y objetos
-# =======================
-crear_tabla()
-inventario = Inventario()
+    if user:
+        return Usuario(
+            user["id_usuario"],
+            user["nombre"],
+            user["email"],
+            user["password"]
+        )
+    return None
 
-# =======================
-# Rutas públicas
-# =======================
+
+# =========================
+# RUTA INICIO
+# =========================
 @app.route("/")
 def inicio():
     return render_template("index.html")
 
-# =======================
-# Registro
-# =======================
+
+# =========================
+# REGISTRO
+# =========================
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if current_user.is_authenticated:
@@ -56,7 +87,7 @@ def register():
             return redirect(url_for("register"))
 
         conexion = obtener_conexion()
-        cursor = conexion.cursor()
+        cursor = conexion.cursor(dictionary=True)
 
         cursor.execute("SELECT * FROM usuarios WHERE email = %s", (email,))
         usuario_existente = cursor.fetchone()
@@ -67,13 +98,15 @@ def register():
             flash("El correo ya está registrado.", "warning")
             return redirect(url_for("register"))
 
-        hashed_password = generate_password_hash(password)
+        password_hash = generate_password_hash(password)
 
+        cursor = conexion.cursor()
         cursor.execute(
             "INSERT INTO usuarios (nombre, email, password) VALUES (%s, %s, %s)",
-            (nombre, email, hashed_password)
+            (nombre, email, password_hash)
         )
         conexion.commit()
+
         cursor.close()
         conexion.close()
 
@@ -82,9 +115,10 @@ def register():
 
     return render_template("register.html")
 
-# =======================
-# Login
-# =======================
+
+# =========================
+# LOGIN
+# =========================
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
@@ -94,22 +128,33 @@ def login():
         email = request.form["email"].strip()
         password = request.form["password"].strip()
 
-        usuario = Usuario.get_by_email(email)
+        conexion = obtener_conexion()
+        cursor = conexion.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM usuarios WHERE email = %s", (email,))
+        user = cursor.fetchone()
 
-        if usuario and check_password_hash(usuario.password, password):
+        cursor.close()
+        conexion.close()
+
+        if user and check_password_hash(user["password"], password):
+            usuario = Usuario(
+                user["id_usuario"],
+                user["nombre"],
+                user["email"],
+                user["password"]
+            )
             login_user(usuario)
             flash(f"Bienvenido, {usuario.nombre}.", "success")
-            next_page = request.args.get("next")
-            return redirect(next_page or url_for("dashboard"))
+            return redirect(url_for("dashboard"))
         else:
             flash("Usuario o contraseña incorrectos.", "danger")
-            return redirect(url_for("login"))
 
     return render_template("login.html")
 
-# =======================
-# Logout
-# =======================
+
+# =========================
+# LOGOUT
+# =========================
 @app.route("/logout")
 @login_required
 def logout():
@@ -117,235 +162,243 @@ def logout():
     flash("Sesión cerrada correctamente.", "info")
     return redirect(url_for("login"))
 
-# =======================
-# Dashboard protegido
-# =======================
+
+# =========================
+# DASHBOARD
+# =========================
 @app.route("/dashboard")
 @login_required
 def dashboard():
     return render_template("dashboard.html", usuario=current_user.nombre)
 
-# =======================
-# Productos
-# =======================
-@app.route("/productos")
-@login_required
-def productos():
-    conn = conectar()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM productos")
-    datos = cursor.fetchall()
-    conn.close()
 
-    inventario.productos.clear()
-
-    for fila in datos:
-        producto = Producto(fila[0], fila[1], fila[2], fila[3])
-        inventario.agregar_producto(producto)
-
-    return render_template("productos.html", productos=inventario.mostrar_todos())
-
-@app.route("/buscar", methods=["POST"])
-@login_required
-def buscar():
-    nombre = request.form["nombre"]
-
-    conn = conectar()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM productos")
-    datos = cursor.fetchall()
-    conn.close()
-
-    inventario.productos.clear()
-
-    for fila in datos:
-        producto = Producto(fila[0], fila[1], fila[2], fila[3])
-        inventario.agregar_producto(producto)
-
-    resultados = inventario.buscar_por_nombre(nombre)
-    return render_template("productos.html", productos=resultados)
-
-@app.route("/agregar", methods=["POST"])
-@login_required
-def agregar():
-    nombre = request.form["nombre"]
-    cantidad = int(request.form["cantidad"])
-    precio = float(request.form["precio"])
-
-    # Guardar en SQLite
-    conn = conectar()
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO productos (nombre, cantidad, precio) VALUES (?, ?, ?)",
-        (nombre, cantidad, precio)
-    )
-    conn.commit()
-    conn.close()
-
-    # Guardar en TXT
-    with open("data/datos.txt", "a", encoding="utf-8") as archivo:
-        archivo.write(f"{nombre},{cantidad},{precio}\n")
-
-    # Guardar en CSV
-    with open("data/datos.csv", "a", newline="", encoding="utf-8") as archivo:
-        writer = csv.writer(archivo)
-        writer.writerow([nombre, cantidad, precio])
-
-    # Guardar en JSON
-    nuevo = {"nombre": nombre, "cantidad": cantidad, "precio": precio}
-    try:
-        with open("data/datos.json", "r", encoding="utf-8") as archivo:
-            datos = json.load(archivo)
-    except:
-        datos = []
-
-    datos.append(nuevo)
-
-    with open("data/datos.json", "w", encoding="utf-8") as archivo:
-        json.dump(datos, archivo, ensure_ascii=False, indent=4)
-
-    flash("Producto agregado correctamente.", "success")
-    return redirect(url_for("productos"))
-
-@app.route("/eliminar/<int:id>")
-@login_required
-def eliminar(id):
-    conn = conectar()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM productos WHERE id=?", (id,))
-    conn.commit()
-    conn.close()
-
-    flash("Producto eliminado correctamente.", "info")
-    return redirect(url_for("productos"))
-
-@app.route("/editar/<int:id>", methods=["GET", "POST"])
-@login_required
-def editar(id):
-    conn = conectar()
-    cursor = conn.cursor()
-
-    if request.method == "POST":
-        cantidad = int(request.form["cantidad"])
-        precio = float(request.form["precio"])
-
-        cursor.execute(
-            "UPDATE productos SET cantidad=?, precio=? WHERE id=?",
-            (cantidad, precio, id)
-        )
-        conn.commit()
-        conn.close()
-        flash("Producto actualizado correctamente.", "success")
-        return redirect(url_for("productos"))
-
-    cursor.execute("SELECT * FROM productos WHERE id=?", (id,))
-    producto = cursor.fetchone()
-    conn.close()
-
-    return render_template("editar.html", producto=producto)
-
-# =======================
-# Usuarios
-# =======================
+# =========================
+# USUARIOS
+# =========================
 @app.route("/usuarios")
 @login_required
 def usuarios():
     conexion = obtener_conexion()
     cursor = conexion.cursor()
-    cursor.execute("SELECT * FROM usuarios")
+    cursor.execute("SELECT id_usuario, nombre, email FROM usuarios")
     usuarios = cursor.fetchall()
     cursor.close()
     conexion.close()
+
     return render_template("usuarios.html", usuarios=usuarios)
 
-# =======================
-# Guardar y ver TXT, CSV, JSON
-# =======================
-@app.route("/guardar_txt", methods=["POST"])
+
+# =========================
+# CATEGORIAS
+# =========================
+@app.route("/categorias", methods=["GET", "POST"])
 @login_required
-def guardar_txt():
-    nombre = request.form["nombre"]
-    cantidad = request.form["cantidad"]
-    precio = request.form["precio"]
+def categorias():
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
 
-    with open("data/datos.txt", "a", encoding="utf-8") as archivo:
-        archivo.write(f"{nombre},{cantidad},{precio}\n")
+    # SI ENVÍA FORMULARIO
+    if request.method == "POST":
+        nombre = request.form["nombre_categoria"]
 
-    return "Datos guardados en TXT"
+        cursor.execute(
+            "INSERT INTO categorias (nombre_categoria) VALUES (%s)",
+            (nombre,)
+        )
+        conexion.commit()
 
-@app.route("/guardar_json", methods=["POST"])
+        return redirect(url_for("categorias"))
+
+    # MOSTRAR DATOS
+    cursor.execute("SELECT * FROM categorias")
+    categorias = cursor.fetchall()
+
+    cursor.close()
+    conexion.close()
+
+    return render_template("categorias.html", categorias=categorias)
+
+
+# =========================
+# PRODUCTOS - LISTAR
+# =========================
+@app.route("/productos")
 @login_required
-def guardar_json():
-    nombre = request.form["nombre"]
-    cantidad = request.form["cantidad"]
-    precio = request.form["precio"]
+def productos():
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
 
-    nuevo = {
-        "nombre": nombre,
-        "cantidad": cantidad,
-        "precio": precio
-    }
+    cursor.execute("""
+        SELECT p.id_producto, p.nombre, p.cantidad, p.precio,
+               c.nombre_categoria, u.nombre
+        FROM productos p
+        INNER JOIN categorias c ON p.id_categoria = c.id_categoria
+        INNER JOIN usuarios u ON p.id_usuario = u.id_usuario
+        ORDER BY p.id_producto ASC
+    """)
+    productos = cursor.fetchall()
 
-    try:
-        with open("data/datos.json", "r", encoding="utf-8") as archivo:
-            datos = json.load(archivo)
-    except:
-        datos = []
+    cursor.execute("SELECT * FROM categorias")
+    categorias = cursor.fetchall()
 
-    datos.append(nuevo)
+    cursor.close()
+    conexion.close()
 
-    with open("data/datos.json", "w", encoding="utf-8") as archivo:
-        json.dump(datos, archivo, ensure_ascii=False, indent=4)
+    return render_template("productos.html", productos=productos, categorias=categorias)
 
-    return "Datos guardados en JSON"
 
-@app.route("/guardar_csv", methods=["POST"])
+# =========================
+# PRODUCTOS - AGREGAR
+# =========================
+@app.route("/agregar", methods=["POST"])
 @login_required
-def guardar_csv():
-    nombre = request.form["nombre"]
-    cantidad = request.form["cantidad"]
-    precio = request.form["precio"]
+def agregar():
+    nombre = request.form["nombre"].strip()
+    cantidad = request.form["cantidad"].strip()
+    precio = request.form["precio"].strip()
+    id_categoria = request.form["id_categoria"].strip()
+    id_usuario = current_user.id
 
-    with open("data/datos.csv", "a", newline="", encoding="utf-8") as archivo:
-        writer = csv.writer(archivo)
-        writer.writerow([nombre, cantidad, precio])
+    if not nombre or not cantidad or not precio or not id_categoria:
+        flash("Todos los campos del producto son obligatorios.", "warning")
+        return redirect(url_for("productos"))
 
-    return "Datos guardados en CSV"
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
 
-@app.route("/ver_txt")
+    cursor.execute("""
+        INSERT INTO productos (nombre, cantidad, precio, id_categoria, id_usuario)
+        VALUES (%s, %s, %s, %s, %s)
+    """, (nombre, cantidad, precio, id_categoria, id_usuario))
+
+    conexion.commit()
+    cursor.close()
+    conexion.close()
+
+    flash("Producto agregado correctamente.", "success")
+    return redirect(url_for("productos"))
+
+
+# =========================
+# PRODUCTOS - EDITAR
+# =========================
+@app.route("/editar/<int:id_producto>", methods=["GET", "POST"])
 @login_required
-def ver_txt():
-    datos = []
+def editar(id_producto):
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
 
-    with open("data/datos.txt", "r", encoding="utf-8") as archivo:
-        for linea in archivo:
-            datos.append(linea.strip().split(","))
+    if request.method == "POST":
+        nombre = request.form["nombre"].strip()
+        cantidad = request.form["cantidad"].strip()
+        precio = request.form["precio"].strip()
+        id_categoria = request.form["id_categoria"].strip()
 
-    return render_template("datos.html", datos=datos)
+        if not nombre or not cantidad or not precio or not id_categoria:
+            flash("Todos los campos son obligatorios.", "warning")
+            cursor.close()
+            conexion.close()
+            return redirect(url_for("editar", id_producto=id_producto))
 
-@app.route("/ver_csv")
+        cursor.execute("""
+            UPDATE productos
+            SET nombre = %s, cantidad = %s, precio = %s, id_categoria = %s
+            WHERE id_producto = %s
+        """, (nombre, cantidad, precio, id_categoria, id_producto))
+
+        conexion.commit()
+        cursor.close()
+        conexion.close()
+
+        flash("Producto actualizado correctamente.", "success")
+        return redirect(url_for("productos"))
+
+    cursor.execute("SELECT * FROM productos WHERE id_producto = %s", (id_producto,))
+    producto = cursor.fetchone()
+
+    cursor.execute("SELECT * FROM categorias")
+    categorias = cursor.fetchall()
+
+    cursor.close()
+    conexion.close()
+
+    return render_template("editar.html", producto=producto, categorias=categorias)
+
+
+# =========================
+# PRODUCTOS - ELIMINAR
+# =========================
+@app.route("/eliminar/<int:id_producto>")
 @login_required
-def ver_csv():
-    datos = []
+def eliminar(id_producto):
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
 
-    with open("data/datos.csv", "r", encoding="utf-8") as archivo:
-        reader = csv.reader(archivo)
+    cursor.execute("DELETE FROM productos WHERE id_producto = %s", (id_producto,))
+    conexion.commit()
 
-        for fila in reader:
-            datos.append(fila)
+    cursor.close()
+    conexion.close()
 
-    return render_template("datos.html", datos=datos)
+    flash("Producto eliminado correctamente.", "info")
+    return redirect(url_for("productos"))
 
-@app.route("/ver_json")
+
+# =========================
+# PDF DE PRODUCTOS
+# =========================
+@app.route("/pdf")
 @login_required
-def ver_json():
-    try:
-        with open("data/datos.json", "r", encoding="utf-8") as archivo:
-            datos = json.load(archivo)
-    except:
-        datos = []
+def generar_pdf():
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
 
-    return render_template("datos.html", datos=datos)
+    cursor.execute("""
+        SELECT p.id_producto, p.nombre, p.cantidad, p.precio,
+               c.nombre_categoria, u.nombre
+        FROM productos p
+        INNER JOIN categorias c ON p.id_categoria = c.id_categoria
+        INNER JOIN usuarios u ON p.id_usuario = u.id_usuario
+        ORDER BY p.id_producto ASC
+    """)
+    datos = cursor.fetchall()
 
+    cursor.close()
+    conexion.close()
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(190, 10, "Reporte de Productos", ln=True, align="C")
+    pdf.ln(5)
+
+    pdf.set_font("Arial", "B", 9)
+    pdf.cell(15, 10, "ID", 1)
+    pdf.cell(40, 10, "Nombre", 1)
+    pdf.cell(25, 10, "Cantidad", 1)
+    pdf.cell(25, 10, "Precio", 1)
+    pdf.cell(40, 10, "Categoria", 1)
+    pdf.cell(45, 10, "Usuario", 1)
+    pdf.ln()
+
+    pdf.set_font("Arial", "", 8)
+    for fila in datos:
+        pdf.cell(15, 10, str(fila[0]), 1)
+        pdf.cell(40, 10, str(fila[1])[:20], 1)
+        pdf.cell(25, 10, str(fila[2]), 1)
+        pdf.cell(25, 10, str(fila[3]), 1)
+        pdf.cell(40, 10, str(fila[4])[:20], 1)
+        pdf.cell(45, 10, str(fila[5])[:22], 1)
+        pdf.ln()
+
+    ruta_pdf = "reporte_productos.pdf"
+    pdf.output(ruta_pdf)
+
+    return send_file(ruta_pdf, as_attachment=True)
+
+
+# =========================
+# EJECUTAR APP
+# =========================
 if __name__ == "__main__":
     app.run(debug=True)

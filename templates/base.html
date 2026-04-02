@@ -38,18 +38,25 @@
     <nav class="bg-secondary py-2">
         <div class="container d-flex justify-content-center gap-4 flex-wrap">
 
-            <a href="/" class="text-white text-decoration-none">Inicio</a>
-            <a href="/about" class="text-white text-decoration-none">Acerca de</a>
-            <a href="/productos" class="text-white text-decoration-none">Productos</a>
-            <a href="/formulario" class="text-white text-decoration-none">Formulario</a>
-            <a href="/usuarios" class="text-white text-decoration-none">Usuarios</a>
+            <!-- SIEMPRE VISIBLE -->
+            <a href="{{ url_for('inicio') }}" class="text-white text-decoration-none">Inicio</a>
 
             {% if current_user.is_authenticated %}
-                <a href="/dashboard" class="text-white text-decoration-none">Dashboard</a>
-                <a href="/logout" class="text-white text-decoration-none">Cerrar Sesión</a>
+                <!-- SOLO SI ESTÁ LOGUEADO -->
+
+                <a href="{{ url_for('dashboard') }}" class="text-white text-decoration-none">Dashboard</a>
+                <a href="{{ url_for('productos') }}" class="text-white text-decoration-none">Productos</a>
+                <a href="{{ url_for('categorias') }}" class="text-white text-decoration-none">Categorías</a>
+                <a href="{{ url_for('usuarios') }}" class="text-white text-decoration-none">Usuarios</a>
+                <a href="{{ url_for('generar_pdf') }}" class="text-white text-decoration-none">PDF</a>
+                <a href="{{ url_for('logout') }}" class="text-white text-decoration-none">Cerrar Sesión</a>
+
             {% else %}
-                <a href="/login" class="text-white text-decoration-none">Iniciar Sesión</a>
-                <a href="/register" class="text-white text-decoration-none">Registrarse</a>
+                <!-- SI NO ESTÁ LOGUEADO -->
+
+                <a href="{{ url_for('login') }}" class="text-white text-decoration-none">Iniciar Sesión</a>
+                <a href="{{ url_for('register') }}" class="text-white text-decoration-none">Registrarse</a>
+
             {% endif %}
 
         </div>

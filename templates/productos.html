@@ -2,97 +2,67 @@
 
 {% block content %}
 
-<h2 class="mb-4">Inventario de Productos</h2>
+<h2 class="mb-4">Productos</h2>
 
-<!-- FORMULARIO AGREGAR -->
-<div class="card mb-4">
-<div class="card-body">
+<!-- FORMULARIO -->
+<form method="POST" action="{{ url_for('agregar') }}" class="row g-2">
+    <div class="col-md-3">
+        <input type="text" name="nombre" class="form-control" placeholder="Nombre del producto" required>
+    </div>
 
-<h4>Agregar Producto</h4>
+    <div class="col-md-2">
+        <input type="number" name="cantidad" class="form-control" placeholder="Cantidad" required>
+    </div>
 
-<form action="/agregar" method="POST" class="row g-3">
+    <div class="col-md-2">
+        <input type="number" step="0.01" name="precio" class="form-control" placeholder="Precio" required>
+    </div>
 
-<div class="col-md-4">
-<input type="text" name="nombre" class="form-control" placeholder="Nombre" required>
-</div>
+    <div class="col-md-3">
+        <select name="id_categoria" class="form-select" required>
+            <option value="">Seleccione categoría</option>
+            {% for categoria in categorias %}
+            <option value="{{ categoria[0] }}">{{ categoria[1] }}</option>
+            {% endfor %}
+        </select>
+    </div>
 
-<div class="col-md-3">
-<input type="number" name="cantidad" class="form-control" placeholder="Cantidad" required>
-</div>
-
-<div class="col-md-3">
-<input type="number" step="0.01" name="precio" class="form-control" placeholder="Precio" required>
-</div>
-
-<div class="col-md-2">
-<button type="submit" class="btn btn-success w-100">Agregar</button>
-</div>
-
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-success w-100">Agregar</button>
+    </div>
 </form>
 
-</div>
-</div>
-
-<!-- BUSCAR -->
-<div class="card mb-4">
-<div class="card-body">
-
-<h4>Buscar Producto</h4>
-
-<form action="/buscar" method="POST" class="row g-3">
-
-<div class="col-md-10">
-<input type="text" name="nombre" class="form-control" placeholder="Buscar por nombre">
-</div>
-
-<div class="col-md-2">
-<button type="submit" class="btn btn-primary w-100">Buscar</button>
-</div>
-
-</form>
-
-</div>
-</div>
+<hr>
 
 <!-- TABLA -->
-<table class="table table-striped table-bordered">
-
-<thead class="table-dark">
-<tr>
-<th>ID</th>
-<th>Nombre</th>
-<th>Cantidad</th>
-<th>Precio</th>
-<th>Acciones</th>
-</tr>
-</thead>
-
-<tbody>
-
-{% for producto in productos %}
-<tr>
-<td>{{ producto.get_id() }}</td>
-<td>{{ producto.get_nombre() }}</td>
-<td>{{ producto.get_cantidad() }}</td>
-<td>{{ producto.get_precio() }}</td>
-
-<td>
-
-<a href="/editar/{{ producto.get_id() }}" class="btn btn-warning btn-sm">
-Editar
-</a>
-
-<a href="/eliminar/{{ producto.get_id() }}" class="btn btn-danger btn-sm">
-Eliminar
-</a>
-
-</td>
-
-</tr>
-{% endfor %}
-
-</tbody>
-
+<table class="table table-bordered table-striped mt-3">
+    <thead class="table-dark">
+        <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Cantidad</th>
+            <th>Precio</th>
+            <th>Categoría</th>
+            <th>Usuario</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for producto in productos %}
+        <tr>
+            <td>{{ producto[0] }}</td>
+            <td>{{ producto[1] }}</td>
+            <td>{{ producto[2] }}</td>
+            <td>${{ producto[3] }}</td>
+            <td>{{ producto[4] }}</td>
+            <td>{{ producto[5] }}</td>
+            <td>
+                <a href="{{ url_for('editar', id_producto=producto[0]) }}" class="btn btn-warning btn-sm">Editar</a>
+                <a href="{{ url_for('eliminar', id_producto=producto[0]) }}" class="btn btn-danger btn-sm">Eliminar</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
 </table>
 
 {% endblock %}
